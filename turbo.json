@@ -1,0 +1,90 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"ui": "tui",
+	"tasks": {
+		"build": {
+			"dependsOn": [
+				"^build",
+				"db:generate"
+			],
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				".env*"
+			],
+			"outputs": [
+				"dist/**",
+				".next/**",
+				"!.next/cache/**"
+			]
+		},
+		"lint": {
+			"dependsOn": [
+				"^lint"
+			]
+		},
+		"check-types": {
+			"dependsOn": [
+				"^check-types"
+			]
+		},
+		"dev": {
+			"cache": false,
+			"persistent": true,
+			"env": [
+				"PORT",
+				"DATABASE_URL",
+				"TURSO_DATABASE_URL",
+				"TURSO_AUTH_TOKEN",
+				"BETTER_AUTH_URL",
+				"CORS_ORIGIN",
+				"NEXT_PUBLIC_SERVER_URL",
+				"ASAAS_API_KEY",
+				"ASAAS_WEBHOOK_SECRET"
+			]
+		},
+		"start": {
+			"dependsOn": [
+				"build"
+			],
+			"env": [
+				"PORT",
+				"DATABASE_URL",
+				"TURSO_DATABASE_URL",
+				"TURSO_AUTH_TOKEN",
+				"BETTER_AUTH_URL",
+				"CORS_ORIGIN",
+				"NEXT_PUBLIC_SERVER_URL",
+				"ASAAS_API_KEY",
+				"ASAAS_WEBHOOK_SECRET"
+			]
+		},
+		"db:push": {
+			"cache": false,
+			"persistent": false
+		},
+		"db:studio": {
+			"cache": false,
+			"persistent": true
+		},
+		"db:migrate": {
+			"cache": false,
+			"persistent": false
+		},
+		"db:generate": {
+			"cache": false,
+			"inputs": [
+				"apps/server/prisma/schema/**"
+			],
+			"outputs": [
+				"apps/server/prisma/generated/**"
+			]
+		},
+		"setup": {
+			"dependsOn": [
+				"db:generate",
+				"db:push"
+			],
+			"cache": false
+		}
+	}
+}

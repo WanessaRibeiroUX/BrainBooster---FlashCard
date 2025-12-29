@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "buildCommand": "cd ../.. && bun install --ignore-optional && bun run build:web",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "SKIP_ENV_VALIDATION": "1",
+    "NODE_ENV": "production",
+    "NEXT_PUBLIC_SERVER_URL": "https://api.sistemacards.com"
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}

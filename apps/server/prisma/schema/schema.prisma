@@ -1,0 +1,281 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// === AUTENTICAÇÃO ===
+model User {
+  id                String         @id @map("_id")
+  name              String
+  email             String
+  emailVerified     Boolean
+  image             String?
+  role              String         @default("user") // user | admin
+  asaasCustomerId   String?        @unique @map("asaas_customer_id")
+  createdAt         DateTime
+  updatedAt         DateTime
+  sessions          Session[]
+  accounts          Account[]
+  decks             Deck[]
+  purchases         Purchase[]
+  subscriptions     Subscription[]
+  favorites         Favorite[]
+  asaasCustomer     AsaasCustomer?
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @map("_id")
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @map("_id")
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @map("_id")
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+// === FLASH CARDS ===
+model Deck {
+  id          Int         @id @default(autoincrement())
+  userId      String      @map("user_id")
+  title       String
+  description String?
+  coverUrl    String?     @map("cover_url")
+  isPublic    Boolean     @default(false) @map("is_public")
+  priceCents  Int         @default(0) @map("price_cents")
+  deletedAt   DateTime?   @map("deleted_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flashcards  Flashcard[]
+  purchases   Purchase[]
+  favorites   Favorite[]
+
+  @@index([userId], name: "idx_decks_user")
+  @@index([isPublic], name: "idx_decks_public")
+  @@index([priceCents], name: "idx_decks_price")
+  @@map("decks")
+}
+
+model Flashcard {
+  id             Int       @id @default(autoincrement())
+  deckId         Int       @map("deck_id")
+  frontText      String    @map("front_text")
+  backText       String    @map("back_text")
+  orderIndex     Int       @default(0) @map("order_index")
+  deletedAt      DateTime? @map("deleted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  
+  deck           Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId, orderIndex], name: "idx_flashcards_deck")
+  @@map("flashcards")
+}
+
+model Purchase {
+  id              Int       @id @default(autoincrement())
+  userId          String    @map("user_id")
+  deckId          Int       @map("deck_id")
+  amountCents     Int       @map("amount_cents")
+  status          String    // pending|paid|failed|refunded|canceled
+  paymentMethod   String?   @map("payment_method")
+  asaasPaymentId  String?   @unique @map("asaas_payment_id")
+  asaasInvoiceId  String?   @map("asaas_invoice_id")
+  asaasPayload    String?   @map("asaas_payload")
+  confirmedAt     DateTime? @map("confirmed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  deck            Deck      @relation(fields: [deckId], references: [id], onDelete: Restrict)
+  asaasPayment    AsaasPayment?
+
+  @@index([userId], name: "idx_purchases_user")
+  @@index([deckId], name: "idx_purchases_deck")
+  @@index([status], name: "idx_purchases_status")
+  @@map("purchases")
+}
+
+model Subscription {
+  id                  Int       @id @default(autoincrement())
+  userId              String    @map("user_id")
+  status              String    // active|trialing|past_due|canceled|paused
+  planName            String    @map("plan_name")
+  priceCents          Int       @map("price_cents")
+  asaasSubscriptionId String    @unique @map("asaas_subscription_id")
+  nextDueDate         DateTime? @map("next_due_date")
+  lastPaymentDate     DateTime? @map("last_payment_date")
+  currentPeriodEnd    DateTime? @map("current_period_end")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  
+  user                User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  asaasSubscription   AsaasSubscription?
+
+  @@index([userId], name: "idx_subscriptions_user")
+  @@index([status], name: "idx_subscriptions_status")
+  @@map("subscriptions")
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id")
+  deckId    Int      @map("deck_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deckId], name: "ux_favorites_user_deck")
+  @@index([deckId], name: "idx_favorites_deck")
+  @@map("favorites")
+}
+
+// === INTEGRAÇÃO ASAAS ===
+model AsaasCustomer {
+  id                String    @id @map("_id")
+  userId            String    @unique @map("user_id")
+  asaasId           String    @unique @map("asaas_id") // ID do cliente na Asaas
+  name              String
+  cpfCnpj           String?   @map("cpf_cnpj")
+  email             String
+  phone             String?
+  mobilePhone       String?   @map("mobile_phone")
+  postalCode        String?   @map("postal_code")
+  address           String?
+  addressNumber     String?   @map("address_number")
+  complement        String?
+  province          String?
+  externalReference String?   @map("external_reference")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments          AsaasPayment[]
+  subscriptions     AsaasSubscription[]
+
+  @@map("asaas_customers")
+}
+
+model AsaasPayment {
+  id                String        @id @map("_id")
+  customerId        String        @map("customer_id")
+  asaasId           String        @unique @map("asaas_id") // ID do payment na Asaas
+  purchaseId        Int?          @unique @map("purchase_id")
+  billingType       String        @map("billing_type") // BOLETO, PIX, CREDIT_CARD, UNDEFINED
+  status            String        // PENDING, CONFIRMED, RECEIVED, OVERDUE, REFUNDED, etc
+  value             Float
+  dueDate           DateTime      @map("due_date")
+  originalDueDate   DateTime?     @map("original_due_date")
+  description       String?
+  externalReference String?       @map("external_reference")
+  invoiceUrl        String?       @map("invoice_url")
+  bankSlipUrl       String?       @map("bank_slip_url")
+  pixQrCode         String?       @map("pix_qr_code")
+  creditCardPaymentLink String?   @map("credit_card_payment_link")
+  confirmedDate     DateTime?     @map("confirmed_date")
+  paymentDate       DateTime?     @map("payment_date")
+  clientPaymentDate DateTime?     @map("client_payment_date")
+  netValue          Float?        @map("net_value")
+  originalValue     Float?        @map("original_value")
+  interestValue     Float?        @map("interest_value")
+  discountValue     Float?        @map("discount_value")
+  fineValue         Float?        @map("fine_value")
+  asaasPayload      String?       @map("asaas_payload") // JSON completo da resposta
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  customer          AsaasCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  purchase          Purchase?     @relation(fields: [purchaseId], references: [id])
+
+  @@index([customerId], name: "idx_asaas_payments_customer")
+  @@index([status], name: "idx_asaas_payments_status")
+  @@index([dueDate], name: "idx_asaas_payments_due_date")
+  @@map("asaas_payments")
+}
+
+model AsaasSubscription {
+  id                  String         @id @map("_id")
+  customerId          String         @map("customer_id")
+  asaasId             String         @unique @map("asaas_id") // ID da subscription na Asaas
+  subscriptionId      Int?           @unique @map("subscription_id")
+  billingType         String         @map("billing_type")
+  status              String         // ACTIVE, INACTIVE, OVERDUE, EXPIRED, etc
+  value               Float
+  nextDueDate         DateTime       @map("next_due_date")
+  cycle               String         // WEEKLY, MONTHLY, YEARLY, etc
+  description         String?
+  endDate             DateTime?      @map("end_date")
+  maxPayments         Int?           @map("max_payments")
+  externalReference   String?        @map("external_reference")
+  asaasPayload        String?        @map("asaas_payload") // JSON completo da resposta
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  customer            AsaasCustomer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subscription        Subscription?  @relation(fields: [subscriptionId], references: [id])
+
+  @@index([customerId], name: "idx_asaas_subscriptions_customer")
+  @@index([status], name: "idx_asaas_subscriptions_status")
+  @@index([nextDueDate], name: "idx_asaas_subscriptions_due_date")
+  @@map("asaas_subscriptions")
+}
+
+model AsaasWebhook {
+  id          String   @id @map("_id")
+  event       String   // PAYMENT_CREATED, PAYMENT_CONFIRMED, etc
+  object      String   // payment, subscription, customer
+  objectId    String   @map("object_id")
+  payload     String   // JSON completo do webhook
+  processed   Boolean  @default(false)
+  processedAt DateTime? @map("processed_at")
+  errorLog    String?  @map("error_log")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([event], name: "idx_asaas_webhooks_event")
+  @@index([processed], name: "idx_asaas_webhooks_processed")
+  @@index([objectId], name: "idx_asaas_webhooks_object_id")
+  @@map("asaas_webhooks")
+}

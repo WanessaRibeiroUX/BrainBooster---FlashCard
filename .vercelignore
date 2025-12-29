@@ -1,0 +1,45 @@
+# Development files
+
+\*.log
+.env.local
+.env.development
+.turbo
+pnpm-lock.yaml
+.pnpm-store
+node_modules/.pnpmlopment files
+
+\*.log
+.env.local
+.env.development
+.turbo
+
+# Database files
+
+_.db
+_.db-journal
+_.db-wal
+_.db-shm
+
+# Build artifacts
+
+node_modules/.cache
+.next/cache
+apps/server/prisma/generated/
+apps/server/dev.db*
+apps/server/prisma/schema/dev.db*
+apps/server/prisma/schema/local.db\*
+
+# Test files
+
+**/_.test._
+**/**tests**/
+coverage/
+
+# Documentation
+
+\*.md
+!README.md
+
+# Scripts
+
+apps/server/scripts/

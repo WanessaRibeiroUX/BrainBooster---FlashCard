@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "buildCommand": "bun run vercel-build",
+  "installCommand": "bun install --frozen-lockfile",
+  "outputDirectory": ".next",
+  "functions": {
+    "apps/server/src/app/api/**": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "SKIP_ENV_VALIDATION": "1",
+    "NODE_ENV": "production",
+    "BUN_INSTALL_CACHE_DIR": "/tmp/.bun-cache"
+  }
+}

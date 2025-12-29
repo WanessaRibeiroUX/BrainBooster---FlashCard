@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "buildCommand": "cd ../.. && bun install --ignore-optional && bun run build:server",
+  "functions": {
+    "src/index.ts": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "env": {
+    "NODE_ENV": "production",
+    "CORS_ORIGIN": "https://sistemacards.com",
+    "BETTER_AUTH_URL": "https://api.sistemacards.com"
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://sistemacards.com"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,POST,OPTIONS,PUT,DELETE"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type,Authorization,x-trpc-source"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}
